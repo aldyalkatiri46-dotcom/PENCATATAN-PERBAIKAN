@@ -42,13 +42,13 @@
   <!-- Main Container -->
   <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
 
-    <!-- Card Analisa Perhari (Fitur Baru) -->
+    <!-- Card Analisa Perhari -->
     <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
       <h2 class="text-lg font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2">
         <i class="fa-solid fa-magnifying-glass-chart text-indigo-600"></i> Analisa Tren Perbaikan Per Hari
       </h2>
       <div id="dailyAnalysisContainer" class="p-4 rounded-xl border flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50">
-        <!-- Diisi otomatis oleh Javascript -->
+        <!-- Diisi otomatis via JS -->
       </div>
     </div>
 
@@ -104,7 +104,7 @@
 
     let records = JSON.parse(localStorage.getItem('workshop_records')) || [];
 
-    // Fungsi Analisa Harian (Meningkat/Menurun/Stabil)
+    // Fungsi Analisa Harian
     function renderDailyAnalysis() {
       const container = document.getElementById('dailyAnalysisContainer');
       
@@ -117,7 +117,6 @@
         return;
       }
 
-      // Kelompokkan total perbaikan per tanggal
       const dailyTotals = {};
       records.forEach(item => {
         if (!dailyTotals[item.tanggal]) {
@@ -126,7 +125,6 @@
         dailyTotals[item.tanggal] += item.totalPermintaan;
       });
 
-      // Urutkan tanggal dari lama ke baru
       const sortedDates = Object.keys(dailyTotals).sort((a, b) => new Date(a) - new Date(b));
 
       if (sortedDates.length < 2) {
@@ -141,7 +139,6 @@
         return;
       }
 
-      // Ambil 2 hari terakhir untuk dibandingkan
       const latestDate = sortedDates[sortedDates.length - 1];
       const prevDate = sortedDates[sortedDates.length - 2];
 
@@ -282,7 +279,6 @@
       });
     }
 
-    // Jalankan kalkulasi analisa & grafik saat dibuka
     renderDailyAnalysis();
     setFilter('1week');
   </script>
