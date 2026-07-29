@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Statistik & Grafik - Workshop KM36</title>
+  <title>Statistik & Analisa - Workshop KM36</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Font Awesome Icons -->
@@ -41,6 +41,16 @@
 
   <!-- Main Container -->
   <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- Card Analisa Perhari (Fitur Baru) -->
+    <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200">
+      <h2 class="text-lg font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-magnifying-glass-chart text-indigo-600"></i> Analisa Tren Perbaikan Per Hari
+      </h2>
+      <div id="dailyAnalysisContainer" class="p-4 rounded-xl border flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50">
+        <!-- Diisi otomatis oleh Javascript -->
+      </div>
+    </div>
 
     <!-- Section Filter & Statistik Header -->
     <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 space-y-6">
@@ -93,6 +103,89 @@
     let chartInstance = null;
 
     let records = JSON.parse(localStorage.getItem('workshop_records')) || [];
+
+    // Fungsi Analisa Harian (Meningkat/Menurun/Stabil)
+    function renderDailyAnalysis() {
+      const container = document.getElementById('dailyAnalysisContainer');
+      
+      if (records.length === 0) {
+        container.innerHTML = `
+          <div class="text-slate-400 text-sm text-center w-full py-2">
+            Belum ada data transaksi perbaikan untuk dianalisa.
+          </div>
+        `;
+        return;
+      }
+
+      // Kelompokkan total perbaikan per tanggal
+      const dailyTotals = {};
+      records.forEach(item => {
+        if (!dailyTotals[item.tanggal]) {
+          dailyTotals[item.tanggal] = 0;
+        }
+        dailyTotals[item.tanggal] += item.totalPermintaan;
+      });
+
+      // Urutkan tanggal dari lama ke baru
+      const sortedDates = Object.keys(dailyTotals).sort((a, b) => new Date(a) - new Date(b));
+
+      if (sortedDates.length < 2) {
+        const singleDate = sortedDates[0];
+        container.innerHTML = `
+          <div>
+            <p class="text-sm font-semibold text-slate-700">Tanggal Pencatatan: ${singleDate}</p>
+            <p class="text-xs text-slate-500 mt-1">Diperlukan minimal data dari 2 hari berbeda untuk membandingkan peningkatan/penurunan.</p>
+          </div>
+          <div class="text-2xl font-bold text-indigo-600">${dailyTotals[singleDate]} Unit</div>
+        `;
+        return;
+      }
+
+      // Ambil 2 hari terakhir untuk dibandingkan
+      const latestDate = sortedDates[sortedDates.length - 1];
+      const prevDate = sortedDates[sortedDates.length - 2];
+
+      const latestVal = dailyTotals[latestDate];
+      const prevVal = dailyTotals[prevDate];
+      const diff = latestVal - prevVal;
+
+      let statusBadge = '';
+      let statusText = '';
+
+      if (diff > 0) {
+        statusBadge = `
+          <div class="flex items-center gap-2 text-red-600 bg-red-100 px-4 py-2 rounded-lg font-bold">
+            <i class="fa-solid fa-arrow-trend-up text-xl"></i>
+            <span>MENINGKAT (+${diff})</span>
+          </div>
+        `;
+        statusText = `Jumlah perbaikan pada <span class="font-bold text-slate-800">${latestDate}</span> meningkat sebanyak <span class="font-bold text-red-600">${diff} unit</span> dibandingkan tanggal <span class="font-bold text-slate-800">${prevDate}</span>.`;
+      } else if (diff < 0) {
+        statusBadge = `
+          <div class="flex items-center gap-2 text-emerald-600 bg-emerald-100 px-4 py-2 rounded-lg font-bold">
+            <i class="fa-solid fa-arrow-trend-down text-xl"></i>
+            <span>PENURUNAN (${diff})</span>
+          </div>
+        `;
+        statusText = `Jumlah perbaikan pada <span class="font-bold text-slate-800">${latestDate}</span> mengalami penurunan sebanyak <span class="font-bold text-emerald-600">${Math.abs(diff)} unit</span> dibandingkan tanggal <span class="font-bold text-slate-800">${prevDate}</span>.`;
+      } else {
+        statusBadge = `
+          <div class="flex items-center gap-2 text-slate-700 bg-slate-200 px-4 py-2 rounded-lg font-bold">
+            <i class="fa-solid fa-minus text-xl"></i>
+            <span>STABIL / SAMA</span>
+          </div>
+        `;
+        statusText = `Jumlah perbaikan pada <span class="font-bold text-slate-800">${latestDate}</span> sama persis dengan tanggal <span class="font-bold text-slate-800">${prevDate}</span> (${latestVal} unit).`;
+      }
+
+      container.innerHTML = `
+        <div class="space-y-1">
+          <p class="text-sm text-slate-600">${statusText}</p>
+          <p class="text-xs text-slate-400">*Perbandingan berdasarkan 2 hari aktif pencatatan terakhir.</p>
+        </div>
+        <div>${statusBadge}</div>
+      `;
+    }
 
     function getFilteredRecords(filter) {
       const now = new Date();
@@ -189,6 +282,8 @@
       });
     }
 
+    // Jalankan kalkulasi analisa & grafik saat dibuka
+    renderDailyAnalysis();
     setFilter('1week');
   </script>
 </body>
