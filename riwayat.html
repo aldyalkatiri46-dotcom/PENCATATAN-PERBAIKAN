@@ -153,16 +153,13 @@
       }
     });
 
-    // ==========================================
     // FITUR EXPORT EXCEL
-    // ==========================================
     document.getElementById('exportExcelBtn').addEventListener('click', () => {
       if (records.length === 0) {
         alert('Tidak ada data untuk diexport!');
         return;
       }
 
-      // Formatting data khusus Excel
       const excelData = records.map(item => ({
         'Tanggal': item.tanggal,
         'Nama Bengkel': item.namaBengkel,
@@ -179,7 +176,6 @@
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Riwayat Perbaikan");
 
-      // Auto-fit column widths
       const max_width = excelData.reduce((w, r) => Math.max(w, r['Tim Perbaikan'].length), 15);
       worksheet['!cols'] = [
         { wch: 12 }, { wch: 18 }, { wch: max_width + 2 }, { wch: 12 },
@@ -190,9 +186,7 @@
       XLSX.writeFile(workbook, fileName);
     });
 
-    // ==========================================
     // FITUR EXPORT PDF
-    // ==========================================
     document.getElementById('exportPdfBtn').addEventListener('click', () => {
       if (records.length === 0) {
         alert('Tidak ada data untuk diexport!');
@@ -202,16 +196,14 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF('landscape', 'mm', 'a4');
 
-      // Judul Laporan
       doc.setFontSize(16);
-      doc.setTextColor(30, 27, 75); // Dark Indigo
+      doc.setTextColor(30, 27, 75);
       doc.text("LAPORAN RIWAYAT PERBAIKAN WORKSHOP KM36", 14, 15);
 
       doc.setFontSize(10);
       doc.setTextColor(100);
       doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
 
-      // Data Kolom & Baris
       const tableHeaders = [
         ["Tanggal", "Bengkel", "Tim Perbaikan", "Shift", "Di Tempat", "Sedang", "Akan Datang", "Total Req.", "Darurat"]
       ];
@@ -228,14 +220,13 @@
         item.perbaikanDarurat
       ]);
 
-      // Buat Tabel dengan AutoTable
       doc.autoTable({
         head: tableHeaders,
         body: tableRows,
         startY: 28,
         theme: 'grid',
         headStyles: {
-          fillColor: [49, 46, 129], // Indigo 900
+          fillColor: [49, 46, 129],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
           halign: 'center'
