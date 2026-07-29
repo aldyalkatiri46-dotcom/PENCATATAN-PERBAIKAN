@@ -8,6 +8,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- SheetJS (XLSX) untuk Export Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- jsPDF & AutoTable untuk Export PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
 
@@ -42,16 +47,26 @@
 
     <!-- Table Container -->
     <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 overflow-hidden">
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b pb-4">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b pb-4">
         <div>
           <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
             <i class="fa-solid fa-list-check text-indigo-600"></i> Riwayat Pencatatan Perbaikan
           </h2>
           <p class="text-xs text-slate-500">Daftar seluruh laporan perbaikan yang telah diinputkan</p>
         </div>
-        <button id="clearDataBtn" class="text-sm bg-red-100 text-red-600 hover:bg-red-200 px-4 py-2 rounded-lg transition font-medium flex items-center gap-2">
-          <i class="fa-solid fa-trash"></i> Hapus Semua Data
-        </button>
+
+        <!-- Group Aksi & Export -->
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <button id="exportExcelBtn" class="flex-1 md:flex-none text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition font-semibold flex items-center justify-center gap-2 shadow-sm">
+            <i class="fa-solid fa-file-excel"></i> Export Excel
+          </button>
+          <button id="exportPdfBtn" class="flex-1 md:flex-none text-sm bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg transition font-semibold flex items-center justify-center gap-2 shadow-sm">
+            <i class="fa-solid fa-file-pdf"></i> Export PDF
+          </button>
+          <button id="clearDataBtn" class="flex-1 md:flex-none text-sm bg-red-100 text-red-600 hover:bg-red-200 px-4 py-2 rounded-lg transition font-medium flex items-center justify-center gap-2">
+            <i class="fa-solid fa-trash"></i> Hapus Semua
+          </button>
+        </div>
       </div>
 
       <div class="overflow-x-auto">
@@ -112,7 +127,7 @@
           <td class="p-3 text-center font-bold text-indigo-700 bg-indigo-50/50">${record.totalPermintaan}</td>
           <td class="p-3 text-center font-bold text-red-600 bg-red-50/50">${record.perbaikanDarurat}</td>
           <td class="p-3 text-center">
-            <button onclick="deleteRecord(${index})" class="text-red-500 hover:text-red-700 transition">
+            <button onclick="deleteRecord(${index})" class="text-red-500 hover:text-red-700 transition" title="Hapus Baris Ini">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </td>
@@ -136,6 +151,107 @@
         localStorage.removeItem('workshop_records');
         renderTable();
       }
+    });
+
+    // ==========================================
+    // FITUR EXPORT EXCEL
+    // ==========================================
+    document.getElementById('exportExcelBtn').addEventListener('click', () => {
+      if (records.length === 0) {
+        alert('Tidak ada data untuk diexport!');
+        return;
+      }
+
+      // Formatting data khusus Excel
+      const excelData = records.map(item => ({
+        'Tanggal': item.tanggal,
+        'Nama Bengkel': item.namaBengkel,
+        'Tim Perbaikan': item.timPerbaikan,
+        'Shift Kerja': item.shiftKerja,
+        'Di Tempat': item.diTempat,
+        'Sedang Perbaikan': item.sedangPerbaikan,
+        'Akan Diperbaiki': item.akanDiperbaiki,
+        'Total Permintaan': item.totalPermintaan,
+        'Perbaikan Darurat': item.perbaikanDarurat
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Riwayat Perbaikan");
+
+      // Auto-fit column widths
+      const max_width = excelData.reduce((w, r) => Math.max(w, r['Tim Perbaikan'].length), 15);
+      worksheet['!cols'] = [
+        { wch: 12 }, { wch: 18 }, { wch: max_width + 2 }, { wch: 12 },
+        { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 14 }
+      ];
+
+      const fileName = `Laporan_Perbaikan_KM36_${new Date().toISOString().slice(0,10)}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+    });
+
+    // ==========================================
+    // FITUR EXPORT PDF
+    // ==========================================
+    document.getElementById('exportPdfBtn').addEventListener('click', () => {
+      if (records.length === 0) {
+        alert('Tidak ada data untuk diexport!');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('landscape', 'mm', 'a4');
+
+      // Judul Laporan
+      doc.setFontSize(16);
+      doc.setTextColor(30, 27, 75); // Dark Indigo
+      doc.text("LAPORAN RIWAYAT PERBAIKAN WORKSHOP KM36", 14, 15);
+
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
+
+      // Data Kolom & Baris
+      const tableHeaders = [
+        ["Tanggal", "Bengkel", "Tim Perbaikan", "Shift", "Di Tempat", "Sedang", "Akan Datang", "Total Req.", "Darurat"]
+      ];
+
+      const tableRows = records.map(item => [
+        item.tanggal,
+        item.namaBengkel,
+        item.timPerbaikan,
+        item.shiftKerja,
+        item.diTempat,
+        item.sedangPerbaikan,
+        item.akanDiperbaiki,
+        item.totalPermintaan,
+        item.perbaikanDarurat
+      ]);
+
+      // Buat Tabel dengan AutoTable
+      doc.autoTable({
+        head: tableHeaders,
+        body: tableRows,
+        startY: 28,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [49, 46, 129], // Indigo 900
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        columnStyles: {
+          4: { halign: 'center' },
+          5: { halign: 'center' },
+          6: { halign: 'center' },
+          7: { halign: 'center', fontStyle: 'bold' },
+          8: { halign: 'center', fontStyle: 'bold', textColor: [220, 38, 38] }
+        },
+        styles: { fontSize: 9, cellPadding: 3 }
+      });
+
+      const fileName = `Laporan_Perbaikan_KM36_${new Date().toISOString().slice(0,10)}.pdf`;
+      doc.save(fileName);
     });
 
     renderTable();
