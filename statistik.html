@@ -70,7 +70,7 @@
         </div>
       </div>
 
-      <!-- Ringkasan Angka Statistik -->
+      <!-- Ringkasan Angka Statistik (Baris Utama) -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-slate-50 p-4 rounded-lg border text-center">
           <p class="text-xs text-slate-500 font-medium">Total Permintaan</p>
@@ -87,6 +87,36 @@
         <div class="bg-slate-50 p-4 rounded-lg border text-center">
           <p class="text-xs text-slate-500 font-medium">Shift Malam</p>
           <p id="statMalam" class="text-3xl font-bold text-slate-700">0</p>
+        </div>
+      </div>
+
+      <!-- Detail Penjumlahan Status Perbaikan -->
+      <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+        <h3 class="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-list-check"></i> Rincian Status Pekerjaan
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p class="text-xs text-slate-500 font-medium">Di Tempat</p>
+              <p id="statDiTempat" class="text-2xl font-bold text-sky-600">0</p>
+            </div>
+            <i class="fa-solid fa-location-dot text-sky-400 text-xl"></i>
+          </div>
+          <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p class="text-xs text-slate-500 font-medium">Sedang Perbaikan</p>
+              <p id="statSedang" class="text-2xl font-bold text-amber-600">0</p>
+            </div>
+            <i class="fa-solid fa-gears text-amber-400 text-xl"></i>
+          </div>
+          <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p class="text-xs text-slate-500 font-medium">Akan Diperbaiki</p>
+              <p id="statAkan" class="text-2xl font-bold text-emerald-600">0</p>
+            </div>
+            <i class="fa-solid fa-clock text-emerald-400 text-xl"></i>
+          </div>
         </div>
       </div>
 
@@ -218,6 +248,8 @@
       const filteredData = getFilteredRecords(currentFilter);
 
       let sumTotal = 0, sumDarurat = 0, countPagi = 0, countMalam = 0;
+      let sumDiTempat = 0, sumSedang = 0, sumAkan = 0;
+
       const groupedData = {};
 
       filteredData.forEach(item => {
@@ -226,20 +258,36 @@
         if(item.shiftKerja === 'Pagi') countPagi++;
         if(item.shiftKerja === 'Malam') countMalam++;
 
+        // Penjumlahan Detail Status
+        sumDiTempat += (item.diTempat || 0);
+        sumSedang += (item.sedangPerbaikan || 0);
+        sumAkan += (item.akanDiperbaiki || 0);
+
         if (!groupedData[item.tanggal]) {
-          groupedData[item.tanggal] = { total: 0, darurat: 0 };
+          groupedData[item.tanggal] = { diTempat: 0, sedang: 0, akan: 0, darurat: 0 };
         }
-        groupedData[item.tanggal].total += item.totalPermintaan;
-        groupedData[item.tanggal].darurat += item.perbaikanDarurat;
+        groupedData[item.tanggal].diTempat += (item.diTempat || 0);
+        groupedData[item.tanggal].sedang += (item.sedangPerbaikan || 0);
+        groupedData[item.tanggal].akan += (item.akanDiperbaiki || 0);
+        groupedData[item.tanggal].darurat += (item.perbaikanDarurat || 0);
       });
 
+      // Update elemen ringkasan utama
       document.getElementById('statTotal').innerText = sumTotal;
       document.getElementById('statDarurat').innerText = sumDarurat;
       document.getElementById('statPagi').innerText = countPagi;
       document.getElementById('statMalam').innerText = countMalam;
 
+      // Update elemen rincian status perbaikan
+      document.getElementById('statDiTempat').innerText = sumDiTempat;
+      document.getElementById('statSedang').innerText = sumSedang;
+      document.getElementById('statAkan').innerText = sumAkan;
+
       const sortedLabels = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
-      const totalSeries = sortedLabels.map(date => groupedData[date].total);
+      
+      const diTempatSeries = sortedLabels.map(date => groupedData[date].diTempat);
+      const sedangSeries = sortedLabels.map(date => groupedData[date].sedang);
+      const akanSeries = sortedLabels.map(date => groupedData[date].akan);
       const daruratSeries = sortedLabels.map(date => groupedData[date].darurat);
 
       const ctx = document.getElementById('repairChart').getContext('2d');
@@ -253,16 +301,28 @@
           labels: sortedLabels.length ? sortedLabels : ['Tidak Ada Data'],
           datasets: [
             {
-              label: 'Total Perbaikan Standar',
-              data: totalSeries.length ? totalSeries : [0],
-              backgroundColor: '#4f46e5',
-              borderRadius: 6
+              label: 'Di Tempat',
+              data: diTempatSeries.length ? diTempatSeries : [0],
+              backgroundColor: '#0284c7', // Sky Blue
+              borderRadius: 4
+            },
+            {
+              label: 'Sedang Perbaikan',
+              data: sedangSeries.length ? sedangSeries : [0],
+              backgroundColor: '#d97706', // Amber
+              borderRadius: 4
+            },
+            {
+              label: 'Akan Diperbaiki',
+              data: akanSeries.length ? akanSeries : [0],
+              backgroundColor: '#059669', // Emerald
+              borderRadius: 4
             },
             {
               label: 'Perbaikan Darurat',
               data: daruratSeries.length ? daruratSeries : [0],
-              backgroundColor: '#dc2626',
-              borderRadius: 6
+              backgroundColor: '#dc2626', // Red
+              borderRadius: 4
             }
           ]
         },
@@ -273,6 +333,7 @@
             legend: { position: 'top' }
           },
           scales: {
+            x: { stacked: false },
             y: { beginAtZero: true, ticks: { precision: 0 } }
           }
         }
