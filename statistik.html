@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Statistik & Grafik - Workshop KM36</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+
+  <!-- Header & Navigation -->
+  <header class="bg-indigo-900 text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto py-4 px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-wrench text-3xl text-amber-400"></i>
+        <div>
+          <h1 class="text-2xl font-bold tracking-wide">WORKSHOP KM36</h1>
+          <p class="text-indigo-200 text-xs">Sistem Pencatatan Perbaikan Bengkel</p>
+        </div>
+      </div>
+
+      <!-- Menu Navigasi -->
+      <nav class="flex items-center gap-2">
+        <a href="index.html" class="bg-indigo-800/60 hover:bg-indigo-700 text-indigo-100 hover:text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition border border-indigo-700">
+          <i class="fa-solid fa-pen-to-square"></i> Input Perbaikan
+        </a>
+        <a href="riwayat.html" class="bg-indigo-800/60 hover:bg-indigo-700 text-indigo-100 hover:text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition border border-indigo-700">
+          <i class="fa-solid fa-list-check"></i> Riwayat
+        </a>
+        <a href="statistik.html" class="bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 shadow border border-indigo-500">
+          <i class="fa-solid fa-chart-line text-amber-400"></i> Statistik
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- Section Filter & Statistik Header -->
+    <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-chart-column text-indigo-600"></i> Dashboard Grafik Statistik
+          </h2>
+          <p class="text-xs text-slate-500">Visualisasi data perbaikan berdasarkan periode yang dipilih</p>
+        </div>
+
+        <!-- Tombol Filter Periode -->
+        <div class="inline-flex rounded-lg bg-slate-100 p-1 border border-slate-200 text-xs font-semibold">
+          <button onclick="setFilter('1week')" id="btn-1week" class="filter-btn px-4 py-2 rounded-md transition text-slate-600 hover:text-indigo-600">1 Minggu</button>
+          <button onclick="setFilter('1month')" id="btn-1month" class="filter-btn px-4 py-2 rounded-md transition text-slate-600 hover:text-indigo-600">1 Bulan</button>
+          <button onclick="setFilter('1year')" id="btn-1year" class="filter-btn px-4 py-2 rounded-md transition text-slate-600 hover:text-indigo-600">1 Tahun</button>
+        </div>
+      </div>
+
+      <!-- Ringkasan Angka Statistik -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-50 p-4 rounded-lg border text-center">
+          <p class="text-xs text-slate-500 font-medium">Total Permintaan</p>
+          <p id="statTotal" class="text-3xl font-bold text-indigo-700">0</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-lg border text-center">
+          <p class="text-xs text-slate-500 font-medium">Total Darurat</p>
+          <p id="statDarurat" class="text-3xl font-bold text-red-600">0</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-lg border text-center">
+          <p class="text-xs text-slate-500 font-medium">Shift Pagi</p>
+          <p id="statPagi" class="text-3xl font-bold text-amber-600">0</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-lg border text-center">
+          <p class="text-xs text-slate-500 font-medium">Shift Malam</p>
+          <p id="statMalam" class="text-3xl font-bold text-slate-700">0</p>
+        </div>
+      </div>
+
+      <!-- Canvas Tempat Grafik -->
+      <div class="relative w-full h-[380px]">
+        <canvas id="repairChart"></canvas>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let currentFilter = '1week';
+    let chartInstance = null;
+
+    let records = JSON.parse(localStorage.getItem('workshop_records')) || [];
+
+    function getFilteredRecords(filter) {
+      const now = new Date();
+      return records.filter(record => {
+        const recordDate = new Date(record.tanggal);
+        const diffTime = Math.abs(now - recordDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (filter === '1week') return diffDays <= 7;
+        if (filter === '1month') return diffDays <= 30;
+        if (filter === '1year') return diffDays <= 365;
+        return true;
+      });
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+        btn.classList.add('text-slate-600');
+      });
+      const activeBtn = document.getElementById(`btn-${filter}`);
+      if(activeBtn) {
+        activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+        activeBtn.classList.remove('text-slate-600');
+      }
+
+      updateChartAndStats();
+    }
+
+    function updateChartAndStats() {
+      const filteredData = getFilteredRecords(currentFilter);
+
+      let sumTotal = 0, sumDarurat = 0, countPagi = 0, countMalam = 0;
+      const groupedData = {};
+
+      filteredData.forEach(item => {
+        sumTotal += item.totalPermintaan;
+        sumDarurat += item.perbaikanDarurat;
+        if(item.shiftKerja === 'Pagi') countPagi++;
+        if(item.shiftKerja === 'Malam') countMalam++;
+
+        if (!groupedData[item.tanggal]) {
+          groupedData[item.tanggal] = { total: 0, darurat: 0 };
+        }
+        groupedData[item.tanggal].total += item.totalPermintaan;
+        groupedData[item.tanggal].darurat += item.perbaikanDarurat;
+      });
+
+      document.getElementById('statTotal').innerText = sumTotal;
+      document.getElementById('statDarurat').innerText = sumDarurat;
+      document.getElementById('statPagi').innerText = countPagi;
+      document.getElementById('statMalam').innerText = countMalam;
+
+      const sortedLabels = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
+      const totalSeries = sortedLabels.map(date => groupedData[date].total);
+      const daruratSeries = sortedLabels.map(date => groupedData[date].darurat);
+
+      const ctx = document.getElementById('repairChart').getContext('2d');
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sortedLabels.length ? sortedLabels : ['Tidak Ada Data'],
+          datasets: [
+            {
+              label: 'Total Perbaikan Standar',
+              data: totalSeries.length ? totalSeries : [0],
+              backgroundColor: '#4f46e5',
+              borderRadius: 6
+            },
+            {
+              label: 'Perbaikan Darurat',
+              data: daruratSeries.length ? daruratSeries : [0],
+              backgroundColor: '#dc2626',
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 } }
+          }
+        }
+      });
+    }
+
+    setFilter('1week');
+  </script>
+</body>
+</html>
